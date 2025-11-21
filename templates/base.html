@@ -1,3 +1,5 @@
+{% load market_tags %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,6 +16,11 @@
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav ms-auto">
         {% if user.is_authenticated %}
+            {% if user|is_vendor %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'my_products' %}">My products</a>
+            </li>
+          {% endif %}
           <li class="nav-item">
             <a class="nav-link" href="{% url 'dashboard' %}">
               Balance: {{ user.token_account.token_balance }} UPBT

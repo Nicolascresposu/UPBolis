@@ -10,6 +10,14 @@ class Product(models.Model):
     price_tokens = models.PositiveIntegerField()
     active = models.BooleanField(default=True)
 
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
+
     def __str__(self):
         return f"{self.name} ({self.price_tokens} UPBT)"
 

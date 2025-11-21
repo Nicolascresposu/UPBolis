@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
 from django.db.models import F
 
-from .forms import SignUpForm
+from .forms import SignUpForm, ProductForm
 from .models import Product, Purchase, UserTokenAccount
 
 
@@ -51,7 +52,8 @@ def buy_product(request, pk):
         messages.error(request, "Quantity must be at least 1.")
         return redirect("product_detail", pk=product.pk)
 
-    account = request.user.token_account
+    # account = request.user.token_account
+    account = UserTokenAccount.objects.select_for_update().get(user=request.user)
     total_cost = product.price_tokens * quantity
 
     # Reload account with lock to avoid race conditions
@@ -87,4 +89,55 @@ def dashboard(request):
         request,
         "dashboard.html",
         {"account": account, "purchases": purchases},
+    )
+
+
+def is_vendor(user):
+    # staff users OR users in Vendors group
+    return user.is_staff or user.groups.filter(name="Vendors").exists()
+
+
+@login_required
+@user_passes_test(is_vendor)
+def my_products(request):
+    products = Product.objects.filter(owner=request.user).order_by("name")
+    return render(request, "my_products.html", {"products": products})
+
+
+@login_required
+@user_passes_test(is_vendor)
+def product_create(request):
+    if request.method == "POST":
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            product = form.save(commit=False)
+            product.owner = request.user
+            product.save()
+            messages.success(request, "Product created successfully.")
+            return redirect("my_products")
+    else:
+        form = ProductForm()
+    return render(
+        request,
+        "product_form.html",
+        {"form": form, "title": "Create product"},
+    )
+
+
+@login_required
+@user_passes_test(is_vendor)
+def product_edit(request, pk):
+    product = get_object_or_404(Product, pk=pk, owner=request.user)
+    if request.method == "POST":
+        form = ProductForm(request.POST, instance=product)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Product updated successfully.")
+            return redirect("my_products")
+    else:
+        form = ProductForm(instance=product)
+    return render(
+        request,
+        "product_form.html",
+        {"form": form, "title": "Edit product"},
     )

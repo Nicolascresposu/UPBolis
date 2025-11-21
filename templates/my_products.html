@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>My products</h2>
+
+<p>
+  <a href="{% url 'product_create' %}" class="btn btn-primary btn-sm">
+    + New product
+  </a>
+</p>
+
+{% if products %}
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Price (UPBT)</th>
+        <th>Active</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in products %}
+        <tr>
+          <td>{{ product.name }}</td>
+          <td>{{ product.price_tokens }}</td>
+          <td>{{ product.active|yesno:"Yes,No" }}</td>
+          <td>
+            <a href="{% url 'product_edit' product.pk %}" class="btn btn-sm btn-outline-secondary">
+              Edit
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>You haven’t created any products yet.</p>
+{% endif %}
+{% endblock %}
