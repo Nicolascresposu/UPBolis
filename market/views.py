@@ -5,9 +5,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
 from django.db.models import F
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
 
 from .forms import SignUpForm, ProductForm, BuyTokensForm
-from .models import Product, Purchase, UserTokenAccount, TokenTopUp
+from .models import Product, Purchase, UserTokenAccount, TokenTopUp, VendorAPIKey, TokenTransfer
 
 
 def home(request):
@@ -224,3 +228,166 @@ def buy_tokens(request):
         form = BuyTokensForm()
 
     return render(request, "buy_tokens.html", {"form": form})
+
+def get_api_key_from_request(request):
+    """
+    Try to read API key from:
+    - X-API-Key header
+    - ?api_key=
+    - POST body field 'api_key'
+    """
+    key = (
+        request.headers.get("X-API-Key")
+        or request.GET.get("api_key")
+        or request.POST.get("api_key")
+    )
+    if not key:
+        return None
+    try:
+        return VendorAPIKey.objects.select_related("vendor").get(
+            key=key,
+            is_active=True,
+        )
+    except VendorAPIKey.DoesNotExist:
+        return None
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_purchase_detail(request, pk):
+    api_key = get_api_key_from_request(request)
+    if not api_key:
+        return JsonResponse({"error": "Invalid or missing API key"}, status=401)
+
+    try:
+        purchase = Purchase.objects.select_related(
+            "user",
+            "product",
+            "product__owner",
+        ).get(pk=pk)
+    except Purchase.DoesNotExist:
+        return JsonResponse({"error": "Purchase not found"}, status=404)
+
+    # Only allow if this vendor owns the product
+    if purchase.product.owner != api_key.vendor:
+        return JsonResponse({"error": "Not authorized for this purchase"}, status=403)
+
+    data = {
+        "id": purchase.id,
+        "buyer": {
+            "id": purchase.user.id,
+            "username": purchase.user.username,
+        },
+        "product": {
+            "id": purchase.product.id,
+            "name": purchase.product.name,
+        },
+        "quantity": purchase.quantity,
+        "total_tokens": purchase.total_tokens,
+        "created_at": purchase.created_at.isoformat(),
+        "vendor": {
+            "id": api_key.vendor.id,
+            "username": api_key.vendor.username,
+        },
+    }
+    return JsonResponse(data, status=200)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@transaction.atomic
+def api_transfer_tokens(request):
+    api_key = get_api_key_from_request(request)
+    if not api_key:
+        return JsonResponse({"error": "Invalid or missing API key"}, status=401)
+
+    # Read JSON or form data
+    try:
+        if request.content_type == "application/json":
+            payload = json.loads(request.body.decode() or "{}")
+        else:
+            payload = request.POST
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+    recipient_username = payload.get("recipient_username")
+    amount = payload.get("amount_tokens")
+    description = payload.get("description", "")
+
+    # Validation
+    if not recipient_username:
+        return JsonResponse({"error": "recipient_username is required"}, status=400)
+    if amount is None:
+        return JsonResponse({"error": "amount_tokens is required"}, status=400)
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        return JsonResponse({"error": "amount_tokens must be an integer"}, status=400)
+
+    if amount <= 0:
+        return JsonResponse({"error": "amount_tokens must be > 0"}, status=400)
+
+    from_user = api_key.vendor
+
+    from django.contrib.auth.models import User
+    try:
+        to_user = User.objects.get(username=recipient_username)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Recipient user not found"}, status=404)
+
+    if from_user == to_user:
+        return JsonResponse({"error": "Cannot transfer tokens to self"}, status=400)
+
+    # Lock both accounts for safe update
+    from_account = UserTokenAccount.objects.select_for_update().get(user=from_user)
+    to_account = UserTokenAccount.objects.select_for_update().get(user=to_user)
+
+    if from_account.token_balance < amount:
+        return JsonResponse({"error": "Insufficient balance"}, status=400)
+
+    from_account.token_balance = F("token_balance") - amount
+    to_account.token_balance = F("token_balance") + amount
+
+    from_account.save()
+    to_account.save()
+
+    transfer = TokenTransfer.objects.create(
+        from_user=from_user,
+        to_user=to_user,
+        amount_tokens=amount,
+        description=description,
+        api_key=api_key,
+    )
+
+    # Refresh to get updated numeric values (because we used F expressions)
+    from_account.refresh_from_db()
+    to_account.refresh_from_db()
+
+    data = {
+        "status": "ok",
+        "transfer_id": transfer.id,
+        "from_user": {
+            "username": from_user.username,
+            "new_balance": from_account.token_balance,
+        },
+        "to_user": {
+            "username": to_user.username,
+            "new_balance": to_account.token_balance,
+        },
+        "amount_tokens": amount,
+        "description": description,
+        "created_at": transfer.created_at.isoformat(),
+    }
+    return JsonResponse(data, status=201)
+
+@login_required
+@user_passes_test(is_vendor)
+def vendor_api_keys(request):
+    keys = VendorAPIKey.objects.filter(vendor=request.user).order_by("-created_at")
+
+    if request.method == "POST":
+        name = request.POST.get("name") or "Default API key"
+        VendorAPIKey.objects.create(vendor=request.user, name=name)
+        messages.success(request, "New API key created.")
+        return redirect("vendor_api_keys")
+
+    return render(request, "vendor_api_keys.html", {"keys": keys})

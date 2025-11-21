@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>My API keys</h2>
+
+<p>Use these API keys in your external applications via the <code>X-API-Key</code> header.</p>
+
+<form method="post" class="mb-4" style="max-width: 400px;">
+  {% csrf_token %}
+  <div class="mb-3">
+    <label for="name" class="form-label">Key name (optional)</label>
+    <input type="text" class="form-control" id="name" name="name" placeholder="My app integration">
+  </div>
+  <button type="submit" class="btn btn-primary">Create new API key</button>
+</form>
+
+{% if keys %}
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Key</th>
+        <th>Active</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in keys %}
+        <tr>
+          <td>{{ k.name }}</td>
+          <td><code>{{ k.key }}</code></td>
+          <td>{{ k.is_active|yesno:"Yes,No" }}</td>
+          <td>{{ k.created_at }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>You have no API keys yet.</p>
+{% endif %}
+{% endblock %}

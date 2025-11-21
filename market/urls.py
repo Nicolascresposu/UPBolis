@@ -14,8 +14,15 @@ urlpatterns = [
     path("vendor/products/", views.my_products, name="my_products"),
     path("vendor/products/new/", views.product_create, name="product_create"),
     path("vendor/products/<int:pk>/edit/", views.product_edit, name="product_edit"),
+    path("vendor/api-keys/", views.vendor_api_keys, name="vendor_api_keys"),
 
     # Tokens
     path("tokens/buy/", views.buy_tokens, name="buy_tokens"),
+
+    # API endpoints for vendors
+    path("api/vendor/purchases/<int:pk>/", views.api_purchase_detail, name="api_purchase_detail"),
+    path("api/vendor/transfer/", views.api_transfer_tokens, name="api_transfer_tokens"),
+
+
 ]
 
