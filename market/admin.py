@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product, UserTokenAccount, Purchase
+from .models import Product, UserTokenAccount, Purchase, TokenTopUp
 
 
 @admin.register(Product)
@@ -19,3 +19,10 @@ class UserTokenAccountAdmin(admin.ModelAdmin):
 class PurchaseAdmin(admin.ModelAdmin):
     list_display = ("user", "product", "quantity", "total_tokens", "created_at")
     list_filter = ("created_at",)
+
+
+@admin.register(TokenTopUp)
+class TokenTopUpAdmin(admin.ModelAdmin):
+    list_display = ("user", "amount_tokens", "created_at", "description")
+    list_filter = ("created_at",)
+    search_fields = ("user__username",)

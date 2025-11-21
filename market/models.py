@@ -45,3 +45,12 @@ class Purchase(models.Model):
 
     def __str__(self):
         return f"{self.user.username} bought {self.quantity} x {self.product.name}"
+
+class TokenTopUp(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="token_topups")
+    amount_tokens = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"{self.user.username} +{self.amount_tokens} UPBT on {self.created_at:%Y-%m-%d}"

@@ -16,3 +16,6 @@ class ProductForm(forms.ModelForm):
         model = Product
         # owner is set in the view, not by the user
         fields = ["name", "description", "price_tokens", "active"]
+class BuyTokensForm(forms.Form):
+    amount_tokens = forms.IntegerField(min_value=1, label="Amount of UPBTokens")
+    # Payment gateway goes here (Para el futuro pues dog)

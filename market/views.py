@@ -6,8 +6,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
 from django.db.models import F
 
-from .forms import SignUpForm, ProductForm
-from .models import Product, Purchase, UserTokenAccount
+from .forms import SignUpForm, ProductForm, BuyTokensForm
+from .models import Product, Purchase, UserTokenAccount, TokenTopUp
 
 
 def home(request):
@@ -38,13 +38,54 @@ def product_detail(request, pk):
     return render(request, "product_detail.html", {"product": product})
 
 
+# @login_required
+# @transaction.atomic
+# def buy_product(request, pk):
+#     product = get_object_or_404(Product, pk=pk, active=True)
+
+#     if request.method != "POST":
+#         # Only allow POST
+#         return redirect("product_detail", pk=product.pk)
+
+#     quantity = int(request.POST.get("quantity", 1))
+#     if quantity < 1:
+#         messages.error(request, "Quantity must be at least 1.")
+#         return redirect("product_detail", pk=product.pk)
+
+#     # account = request.user.token_account
+#     account = UserTokenAccount.objects.select_for_update().get(user=request.user)
+#     total_cost = product.price_tokens * quantity
+
+#     # Reload account with lock to avoid race conditions
+#     account = UserTokenAccount.objects.select_for_update().get(pk=account.pk)
+
+#     if account.token_balance < total_cost:
+#         messages.error(request, "Not enough UPBTokens to buy this product.")
+#         return redirect("product_detail", pk=product.pk)
+
+#     # Deduct tokens
+#     account.token_balance = F("token_balance") - total_cost
+#     account.save()
+
+#     Purchase.objects.create(
+#         user=request.user,
+#         product=product,
+#         quantity=quantity,
+#         total_tokens=total_cost,
+#     )
+
+#     messages.success(
+#         request,
+#         f"You bought {quantity} x {product.name} for {total_cost} UPBTokens."
+#     )
+#     return redirect("dashboard")
+
 @login_required
 @transaction.atomic
 def buy_product(request, pk):
     product = get_object_or_404(Product, pk=pk, active=True)
 
     if request.method != "POST":
-        # Only allow POST
         return redirect("product_detail", pk=product.pk)
 
     quantity = int(request.POST.get("quantity", 1))
@@ -52,21 +93,26 @@ def buy_product(request, pk):
         messages.error(request, "Quantity must be at least 1.")
         return redirect("product_detail", pk=product.pk)
 
-    # account = request.user.token_account
-    account = UserTokenAccount.objects.select_for_update().get(user=request.user)
+    # Buyer account (locked)
+    buyer_account = UserTokenAccount.objects.select_for_update().get(user=request.user)
     total_cost = product.price_tokens * quantity
 
-    # Reload account with lock to avoid race conditions
-    account = UserTokenAccount.objects.select_for_update().get(pk=account.pk)
-
-    if account.token_balance < total_cost:
+    if buyer_account.token_balance < total_cost:
         messages.error(request, "Not enough UPBTokens to buy this product.")
         return redirect("product_detail", pk=product.pk)
 
-    # Deduct tokens
-    account.token_balance = F("token_balance") - total_cost
-    account.save()
+    # 1) Deduct from buyer
+    buyer_account.token_balance = F("token_balance") - total_cost
+    buyer_account.save()
 
+    # 2) Credit vendor (if product has an owner with a token account)
+    vendor = product.owner
+    if vendor and hasattr(vendor, "token_account"):
+        vendor_account = UserTokenAccount.objects.select_for_update().get(user=vendor)
+        vendor_account.token_balance = F("token_balance") + total_cost
+        vendor_account.save()
+
+    # 3) Register purchase
     Purchase.objects.create(
         user=request.user,
         product=product,
@@ -79,6 +125,7 @@ def buy_product(request, pk):
         f"You bought {quantity} x {product.name} for {total_cost} UPBTokens."
     )
     return redirect("dashboard")
+
 
 
 @login_required
@@ -141,3 +188,39 @@ def product_edit(request, pk):
         "product_form.html",
         {"form": form, "title": "Edit product"},
     )
+
+@login_required
+@transaction.atomic
+def buy_tokens(request):
+    """
+    Very simple 'buy tokens' flow:
+    - User chooses how many tokens they want.
+    - We immediately credit their balance and record a TokenTopUp.
+
+    In a real app, you'd integrate with a payment gateway and only
+    credit tokens after payment confirmation.
+    """
+    if request.method == "POST":
+        form = BuyTokensForm(request.POST)
+        if form.is_valid():
+            amount = form.cleaned_data["amount_tokens"]
+
+            account = UserTokenAccount.objects.select_for_update().get(user=request.user)
+            account.token_balance = F("token_balance") + amount
+            account.save()
+
+            TokenTopUp.objects.create(
+                user=request.user,
+                amount_tokens=amount,
+                description="Manual top-up (no real payment yet)",
+            )
+
+            messages.success(
+                request,
+                f"Your balance was increased by {amount} UPBTokens."
+            )
+            return redirect("dashboard")
+    else:
+        form = BuyTokensForm()
+
+    return render(request, "buy_tokens.html", {"form": form})
