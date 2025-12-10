@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}UPBolis{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="upb-body">
+
+<div class="layout-frame">
+
+    <!-- CABECERA: TARJETA DE MARCA SIN 3D -->
+    <header class="top-card">
+        <div class="top-card__brand">
+            <div class="brand-orbit">
+                <div class="brand-orbit__token"></div>
+                <div class="brand-orbit__ring"></div>
+            </div>
+            <div class="top-card__text">
+                <span class="top-card__title">UPBOLIS</span>
+                <span class="top-card__subtitle">Plataforma de pagos digitales</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO CENTRAL -->
+    <main class="frame-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="frame-footer">
+        © UPBolis · Plataforma de pagos para ecosistema universitario.
+    </footer>
+</div>
+
+<script src="{% static 'js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

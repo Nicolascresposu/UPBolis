@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel de vendedor · UPBolis{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+
+    <header class="dashboard__header">
+        <div>
+            <h1 class="dashboard__title">Panel de vendedor</h1>
+            <p class="dashboard__subtitle">
+                Administra tus productos, revisa las órdenes y controla tus UPBolis recibidos.
+            </p>
+        </div>
+        <div class="dashboard__header-actions">
+            <button class="btn btn-primary" data-open-modal="#modal-product">
+                Nuevo producto
+            </button>
+            <a href="{% url 'logout' %}" class="btn btn-secondary">Cerrar sesión</a>
+        </div>
+    </header>
+
+    <section class="dashboard-grid">
+        <article class="stat-card">
+            <div class="stat-card__label">Saldo en wallet</div>
+            <div class="stat-card__value">
+                {{ wallet.balance|default:"0.00" }} <span class="stat-card__tag">UPBolis</span>
+            </div>
+            <p class="stat-card__hint">Recibido por ventas.</p>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-card__label">Productos publicados</div>
+            <div class="stat-card__value">{{ stats.total_products|default:"0" }}</div>
+            <p class="stat-card__hint">Activos y visibles en el marketplace.</p>
+        </article>
+
+        <article class="stat-card">
+            <div class="stat-card__label">Ventas totales</div>
+            <div class="stat-card__value">{{ stats.total_orders|default:"0" }}</div>
+            <p class="stat-card__hint">Órdenes donde participas como seller.</p>
+        </article>
+    </section>
+
+    <div class="dashboard-columns">
+        <!-- MIS PRODUCTOS -->
+        <section class="panel">
+            <header class="panel__header">
+                <div>
+                    <h2 class="panel__title">Mis productos</h2>
+                    <p class="panel__subtitle">
+                        Edita precios, stock y desactiva productos cuando no estén disponibles.
+                    </p>
+                </div>
+            </header>
+
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th class="table__th--right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <div class="table-main-text">{{ product.name }}</div>
+                                <div class="table-sub-text">{{ product.description|default:"" }}</div>
+                            </td>
+                            <td>{{ product.price }} UPB</td>
+                            <td>{{ product.stock }}</td>
+                            <td>
+                                <span class="chip chip--{{ product.is_active|yesno:'active,inactive' }}">
+                                    {{ product.is_active|yesno:'Activo,Inactivo' }}
+                                </span>
+                            </td>
+                            <td class="table__td--right">
+                                <button
+                                    type="button"
+                                    class="btn btn-small btn-ghost"
+                                    data-edit-product="{{ product.id }}"
+                                >
+                                    Editar
+                                </button>
+
+                                <form method="post"
+                                      action="{% url 'seller_delete_product' product.id %}"
+                                      class="inline-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-small btn-danger">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="table-empty">
+                                Todavía no tienes productos publicados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ÓRDENES DE MIS PRODUCTOS -->
+        <section class="panel">
+            <header class="panel__header">
+                <div>
+                    <h2 class="panel__title">Órdenes de mis productos</h2>
+                    <p class="panel__subtitle">
+                        Órdenes donde tus productos han sido comprados.
+                    </p>
+                </div>
+            </header>
+
+            <div class="table-wrapper table-wrapper--compact">
+                <table class="table table--compact">
+                    <thead>
+                        <tr>
+                            <th>#Orden</th>
+                            <th>Fecha</th>
+                            <th>Comprador</th>
+                            <th>Estado</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.created_at }}</td>
+                            <td>{{ order.buyer_name|default:"—" }}</td>
+                            <td>
+                                <span class="chip chip--{{ order.status }}">
+                                    {{ order.status|title }}
+                                </span>
+                            </td>
+                            <td>{{ order.total }} UPB</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="table-empty">
+                                Aún no tienes órdenes registradas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- MODAL PARA NUEVO PRODUCTO -->
+    <div class="modal" id="modal-product" aria-hidden="true">
+        <div class="modal__backdrop" data-close-modal></div>
+        <div class="modal__dialog" role="dialog" aria-modal="true">
+            <header class="modal__header">
+                <h2 class="modal__title">Nuevo producto</h2>
+                <button class="modal__close" type="button" data-close-modal>&times;</button>
+            </header>
+
+            <!-- 🔴 AQUÍ ESTABA EL PROBLEMA: ya apunta a seller_dashboard -->
+            <form method="post"
+                  action="{% url 'seller_dashboard' %}"
+                  class="modal__body form-grid">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="name">Nombre</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="field">
+                    <label for="price">Precio (UPBolis)</label>
+                    <input type="number" step="0.01" id="price" name="price" required>
+                </div>
+
+                <div class="field">
+                    <label for="stock">Stock</label>
+                    <input type="number" id="stock" name="stock" min="0" required>
+                </div>
+
+                <div class="field field--full">
+                    <label for="description">Descripción</label>
+                    <textarea id="description" name="description" rows="3"></textarea>
+                </div>
+
+                <footer class="modal__footer">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar producto</button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

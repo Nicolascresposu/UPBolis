@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Iniciar sesión · UPBolis{% endblock %}
+
+{% block content %}
+<div class="auth-card-single" data-tilt-container>
+
+    <header class="auth-card-single__header auth-card-single__header--center">
+        <h1 class="auth-card-single__title">Iniciar sesión</h1>
+        <p class="auth-card-single__subtitle">
+            Ingresa con tu correo y contraseña para acceder a tu cuenta UPBolis.
+        </p>
+    </header>
+
+    <form method="post" class="auth-form" novalidate data-form>
+        {% csrf_token %}
+
+        {% if error %}
+            <div class="alert-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <div class="field" data-field>
+            <label for="email">Correo electrónico</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="tu.correo@upbolis.com"
+                value="{{ request.POST.email|default:'' }}"
+                autocomplete="email"
+                required
+            >
+        </div>
+
+        <div class="field" data-field>
+            <label for="password">Contraseña</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                required
+            >
+        </div>
+
+        <div class="auth-options">
+            <label class="auth-remember">
+                <input type="checkbox" name="remember">
+                <span>Mantener sesión iniciada</span>
+            </label>
+            <a href="#" class="auth-link">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <button type="submit" class="btn btn--full btn-primary" data-ripple>
+            Ingresar
+        </button>
+    </form>
+</div>
+{% endblock %}
