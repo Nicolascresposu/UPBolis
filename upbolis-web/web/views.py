@@ -3,6 +3,8 @@ from django.conf import settings
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_POST, require_http_methods
+from datetime import datetime
+from django.utils import timezone
 
 from .utils import api_login_required, role_required
 
@@ -35,21 +37,31 @@ def login_view(request):
         messages.error(request, f"Error al conectar con la API: {e}")
         return render(request, 'login.html', status=500)
 
-    if resp.status_code != 200:
-        data = {}
+    # Si no es 2xx, intentamos leer mensaje pero sin romper si no es JSON
+    if not resp.ok:
+        msg = "Credenciales inválidas o error en la API."
         try:
             data = resp.json()
-        except Exception:
-            pass
-        msg = data.get('message', 'Credenciales inválidas o error en la API.')
+            msg = data.get('message', msg)
+        except ValueError:
+            print("LOGIN API ERROR (no JSON):", resp.status_code, resp.text[:300])
         messages.error(request, msg)
-        return render(request, 'login.html', status=401)
+        return render(request, 'login.html', status=resp.status_code)
 
-    data = resp.json()
+    # Aquí la API devolvió 2xx, pero igual puede no ser JSON…
+    try:
+        data = resp.json()
+    except ValueError:
+        print("LOGIN API NON-JSON BODY:", resp.status_code, resp.text[:300])
+        messages.error(request, "La API de login devolvió una respuesta no válida.")
+        return render(request, 'login.html', status=500)
+
+    # Tomamos token y user del JSON
     token = data.get('token')
-    user = data.get('user')
+    user = data.get('user') or data  # por si el controlador devuelve directamente el user
 
     if not token or not user:
+        print("LOGIN API INVALID DATA:", data)
         messages.error(request, 'Respuesta inválida de la API de login.')
         return render(request, 'login.html', status=500)
 
@@ -76,7 +88,6 @@ def logout_view(request):
                 headers={"Authorization": f"Bearer {token}"}
             )
         except Exception:
-            # ignoramos errores
             pass
 
     request.session.flush()
@@ -145,6 +156,16 @@ def buyer_dashboard(request):
     except Exception:
         transactions = []
 
+    # Destinatarios posibles (combo)
+    recipients = []
+    try:
+        r = requests.get(f"{API_BASE}/wallet/recipients", headers=headers)
+        if r.status_code == 200:
+            data = r.json() or {}
+            recipients = data.get('recipients', []) or []
+    except Exception:
+        recipients = []
+
     # Stats simples
     total_spent = 0
     try:
@@ -157,13 +178,27 @@ def buyer_dashboard(request):
         "total_spent": total_spent,
     }
 
+    # Opcional: formatear fechas de órdenes y transacciones
+    orders_display = []
+    for o in orders:
+        o_copy = dict(o)
+        o_copy['created_at_display'] = _format_iso_datetime(o.get('created_at'))
+        orders_display.append(o_copy)
+
+    tx_display = []
+    for tx in transactions:
+        t_copy = dict(tx)
+        t_copy['created_at_display'] = _format_iso_datetime(tx.get('created_at'))
+        tx_display.append(t_copy)
+
     return render(request, 'buyer_dashboard.html', {
         'user_name': request.session.get('api_user', {}).get('name'),
         'wallet': wallet,
         'products': products,
-        'orders': orders,
-        'transactions': transactions,
+        'orders': orders_display,
+        'transactions': tx_display,
         'stats': stats,
+        'recipients': recipients,
     })
 
 
@@ -209,7 +244,6 @@ def seller_dashboard(request):
         return redirect("seller_dashboard")
 
     # GET normal: cargar datos del seller
-    # Wallet del seller
     wallet = {}
     try:
         r = requests.get(f"{API_BASE}/wallet", headers=headers)
@@ -218,7 +252,6 @@ def seller_dashboard(request):
     except Exception:
         wallet = {}
 
-    # Productos del seller
     products = []
     try:
         r = requests.get(f"{API_BASE}/seller/products", headers=headers)
@@ -227,7 +260,6 @@ def seller_dashboard(request):
     except Exception:
         products = []
 
-    # Órdenes de mis productos
     orders = []
     try:
         r = requests.get(f"{API_BASE}/seller/orders", headers=headers)
@@ -286,7 +318,6 @@ def admin_dashboard(request):
     token = request.session.get('api_token')
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Usuarios
     users = []
     try:
         r = requests.get(f"{API_BASE}/admin/users", headers=headers)
@@ -295,7 +326,6 @@ def admin_dashboard(request):
     except Exception:
         users = []
 
-    # Órdenes globales
     orders = []
     try:
         r = requests.get(f"{API_BASE}/admin/orders", headers=headers)
@@ -304,7 +334,6 @@ def admin_dashboard(request):
     except Exception:
         orders = []
 
-    # Transacciones globales
     transactions = []
     try:
         r = requests.get(f"{API_BASE}/admin/transactions", headers=headers)
@@ -313,7 +342,6 @@ def admin_dashboard(request):
     except Exception:
         transactions = []
 
-    # Stats simples
     total_users = len(users)
     total_sellers = len([u for u in users if str(u.get('role', '')).lower() == 'seller'])
     total_orders = len(orders)
@@ -330,11 +358,23 @@ def admin_dashboard(request):
         "total_volume": total_volume,
     }
 
+    orders_display = []
+    for o in orders:
+        o_copy = dict(o)
+        o_copy['created_at_display'] = _format_iso_datetime(o.get('created_at'))
+        orders_display.append(o_copy)
+
+    tx_display = []
+    for tx in transactions:
+        t_copy = dict(tx)
+        t_copy['created_at_display'] = _format_iso_datetime(tx.get('created_at'))
+        tx_display.append(t_copy)
+
     return render(request, 'admin_dashboard.html', {
         'user': request.session.get('api_user'),
         'users': users,
-        'orders': orders,
-        'transactions': transactions,
+        'orders': orders_display,
+        'transactions': tx_display,
         'stats': stats,
     })
 
@@ -396,3 +436,306 @@ def admin_toggle_user_active(request, user_id):
         messages.error(request, f"Error al conectar con la API: {e}")
 
     return redirect("admin_dashboard")
+
+
+@api_login_required
+@role_required('admin')
+@require_POST
+def admin_create_user(request):
+    """
+    Crear usuario nuevo usando /auth/register, permitiendo definir contraseña
+    y, opcionalmente, cargar saldo inicial con /admin/wallets/{user}/deposit
+    """
+    token = request.session.get('api_token')
+    admin_headers = {"Authorization": f"Bearer {token}"}
+
+    name = request.POST.get("name")
+    email = request.POST.get("email")
+    role = request.POST.get("role", "buyer")
+    initial_balance_raw = request.POST.get("initial_balance") or "0"
+
+    raw_pass = request.POST.get("password") or ""
+    raw_conf = request.POST.get("password_confirmation") or ""
+
+    used_default_password = False
+    default_password = "UPBolis1234"
+
+    if not raw_pass and not raw_conf:
+        password = default_password
+        password_confirmation = default_password
+        used_default_password = True
+    else:
+        if raw_pass != raw_conf:
+            messages.error(request, "Las contraseñas no coinciden.")
+            return redirect("admin_dashboard")
+        password = raw_pass
+        password_confirmation = raw_conf
+
+    payload = {
+        "name": name,
+        "email": email,
+        "password": password,
+        "password_confirmation": password_confirmation,
+        "role": role,
+    }
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/auth/register",
+            json=payload,
+        )
+
+        print("REGISTER RESP STATUS:", resp.status_code)
+        print("REGISTER RESP BODY:", resp.text[:1000])
+
+        if resp.status_code not in (200, 201):
+            try:
+                data = resp.json()
+                msg = data.get("message") or str(data)
+            except Exception:
+                msg = resp.text[:300] or "No se pudo crear el usuario."
+            messages.error(request, f"Error al crear usuario: {msg}")
+            return redirect("admin_dashboard")
+
+        data = resp.json()
+        user_data = data.get("user") if isinstance(data, dict) and "user" in data else data
+        user_id = user_data.get("id") if isinstance(user_data, dict) else None
+
+        try:
+            initial_balance = float(initial_balance_raw)
+        except ValueError:
+            initial_balance = 0
+
+        if used_default_password:
+            base_msg = f"Usuario creado correctamente con contraseña por defecto {default_password}."
+        else:
+            base_msg = "Usuario creado correctamente con la contraseña indicada."
+
+        if user_id and initial_balance > 0:
+            dep_resp = requests.post(
+                f"{API_BASE}/admin/wallets/{user_id}/deposit",
+                headers=admin_headers,
+                json={
+                    "amount": initial_balance,
+                    "reason": "Saldo inicial desde panel de admin",
+                },
+            )
+            print("DEPOSIT RESP STATUS:", dep_resp.status_code)
+            print("DEPOSIT RESP BODY:", dep_resp.text[:500])
+
+            if dep_resp.status_code not in (200, 201):
+                messages.warning(
+                    request,
+                    base_msg + " Sin embargo, no se pudo cargar el saldo inicial."
+                )
+            else:
+                messages.success(
+                    request,
+                    base_msg + f" Además, se cargaron {initial_balance} UPBolis."
+                )
+        else:
+            messages.success(request, base_msg)
+
+    except Exception as e:
+        messages.error(request, f"Error al conectar con la API: {e}")
+        print("REGISTER EXCEPTION:", repr(e))
+
+    return redirect("admin_dashboard")
+
+
+@api_login_required
+@role_required('admin')
+@require_POST
+def admin_topup_tokens(request):
+    token = request.session.get('api_token')
+    headers = {"Authorization": f"Bearer {token}"}
+
+    user_id = request.POST.get("user_id")
+    amount_raw = request.POST.get("amount")
+    reason = request.POST.get("reason") or "Carga manual desde panel admin"
+
+    try:
+        amount = float(amount_raw)
+    except (TypeError, ValueError):
+        amount = 0
+
+    if not user_id or amount <= 0:
+        messages.error(request, "Debes seleccionar un usuario y un monto válido.")
+        return redirect("admin_dashboard")
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/admin/wallets/{user_id}/deposit",
+            headers=headers,
+            json={
+                "amount": amount,
+                "reason": reason,
+            },
+        )
+        if resp.status_code not in (200, 201):
+            try:
+                data = resp.json()
+                msg = data.get("message", "No se pudo cargar UPBolis al usuario.")
+            except Exception:
+                msg = "No se pudo cargar UPBolis al usuario."
+            messages.error(request, msg)
+        else:
+            messages.success(request, f"Se cargaron {amount} UPBolis al usuario.")
+    except Exception as e:
+        messages.error(request, f"Error al conectar con la API: {e}")
+
+    return redirect("admin_dashboard")
+
+
+@api_login_required
+@role_required('admin')
+@require_POST
+def admin_manage_user(request, user_id):
+    token = request.session.get('api_token')
+    headers = {"Authorization": f"Bearer {token}"}
+
+    role = request.POST.get("role")
+    amount_raw = request.POST.get("amount") or "0"
+    operation = request.POST.get("operation") or "deposit"
+    reason = request.POST.get("reason") or "Ajuste manual desde panel admin"
+
+    actions_ok = []
+    errors = []
+
+    if role:
+        try:
+            r_role = requests.patch(
+                f"{API_BASE}/admin/users/{user_id}/role",
+                headers=headers,
+                json={"role": role},
+            )
+            if r_role.status_code not in (200, 204):
+                try:
+                    data = r_role.json()
+                    msg = data.get("message", "No se pudo actualizar el rol.")
+                except Exception:
+                    msg = "No se pudo actualizar el rol."
+                errors.append(msg)
+            else:
+                actions_ok.append("Rol actualizado")
+        except Exception as e:
+            errors.append(f"Error al actualizar el rol: {e}")
+
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        amount = 0
+
+    if amount > 0:
+        endpoint = "deposit" if operation == "deposit" else "withdraw"
+        try:
+            r_wallet = requests.post(
+                f"{API_BASE}/admin/wallets/{user_id}/{endpoint}",
+                headers=headers,
+                json={"amount": amount, "reason": reason},
+            )
+            if r_wallet.status_code not in (200, 201):
+                try:
+                    data = r_wallet.json()
+                    msg = data.get("message", "No se pudo ajustar el saldo del usuario.")
+                except Exception:
+                    msg = "No se pudo ajustar el saldo del usuario."
+                errors.append(msg)
+            else:
+                verb = "añadidos" if endpoint == "deposit" else "restados"
+                actions_ok.append(f"Saldo {verb} ({amount} UPBolis)")
+        except Exception as e:
+            errors.append(f"Error al ajustar el saldo: {e}")
+
+    if actions_ok:
+        messages.success(request, " · ".join(actions_ok))
+    if errors and not actions_ok:
+        messages.error(request, " | ".join(errors))
+    elif errors:
+        messages.warning(request, " · ".join(errors))
+
+    return redirect("admin_dashboard")
+
+
+def _format_iso_datetime(value):
+    """
+    Convierte '2025-12-10T17:19:34.000000Z' a '10/12/2025 13:19'
+    (ajustado a la zona horaria de Django).
+    """
+    if not value:
+        return value
+    try:
+        if isinstance(value, str):
+            s = value.rstrip('Z')
+            dt = datetime.fromisoformat(s)
+        else:
+            return value
+
+        if timezone.is_naive(dt):
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        dt_local = dt.astimezone(timezone.get_current_timezone())
+        return dt_local.strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        return value
+
+
+# ========== WALLET TRANSFER (Django -> Laravel) ==========
+
+@api_login_required
+@role_required('buyer', 'seller', 'admin')
+@require_POST
+def wallet_transfer(request):
+    """
+    Transferir UPBolis desde la wallet del usuario logueado hacia otro usuario.
+    Envía la petición a POST /wallet/transfer de la API Laravel.
+    """
+    token = request.session.get('api_token')
+    headers = {"Authorization": f"Bearer {token}"}
+
+    to_email = request.POST.get("to_email")
+    amount_raw = request.POST.get("amount")
+    reason = request.POST.get("reason") or "Transferencia desde panel web"
+
+    try:
+        amount = float(amount_raw)
+    except (TypeError, ValueError):
+        amount = 0
+
+    if not to_email or amount <= 0:
+        messages.error(request, "Debes seleccionar un destinatario y un monto válido.")
+        return redirect("buyer_dashboard")
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/wallet/transfer",
+            headers=headers,
+            json={
+                "to_email": to_email,
+                "amount": amount,
+                "reason": reason,
+            },
+        )
+
+        print("WALLET TRANSFER STATUS:", resp.status_code)
+        print("WALLET TRANSFER BODY:", resp.text[:400])
+
+        if resp.status_code not in (200, 201):
+            try:
+                data = resp.json()
+                msg = data.get("message") or str(data)
+            except Exception:
+                msg = "No se pudo realizar la transferencia."
+            messages.error(request, msg)
+        else:
+            try:
+                data = resp.json()
+                msg = data.get("message", "Transferencia realizada correctamente.")
+            except Exception:
+                msg = "Transferencia realizada correctamente."
+            messages.success(request, msg)
+
+    except Exception as e:
+        messages.error(request, f"Error al conectar con la API: {e}")
+
+    return redirect("buyer_dashboard")

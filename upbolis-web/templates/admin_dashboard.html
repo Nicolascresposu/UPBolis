@@ -6,15 +6,29 @@
 {% block content %}
 <div class="dashboard">
 
+    <!-- HEADER -->
     <header class="dashboard__header">
         <div>
             <h1 class="dashboard__title">Panel de administrador</h1>
-            <p class="dashboard__subtitle">
-                Controla usuarios, wallets, productos, órdenes y transacciones de toda la plataforma.
-            </p>
         </div>
+
         <div class="dashboard__header-actions">
-            <a href="{% url 'logout' %}" class="btn btn-secondary">Cerrar sesión</a>
+            <!-- Sólo UN botón de nuevo usuario, estilo outline -->
+            <button type="button"
+                    class="btn btn-outline"
+                    data-open-modal="modal-create-user">
+                + Nuevo usuario
+            </button>
+
+            <button type="button"
+                    class="btn btn-accent"
+                    data-open-modal="modal-topup">
+                Cargar UPBolis
+            </button>
+
+            <a href="{% url 'logout' %}" class="btn btn-ghost btn-ghost--danger">
+                Cerrar sesión
+            </a>
         </div>
     </header>
 
@@ -27,7 +41,7 @@
         </article>
 
         <article class="stat-card">
-            <div class="stat-card__label">Sellers activos</div>
+            <div class="stat-card__label">Vendedores activos</div>
             <div class="stat-card__value">{{ stats.total_sellers|default:"0" }}</div>
             <p class="stat-card__hint">Con al menos un producto activo.</p>
         </article>
@@ -55,10 +69,18 @@
                 <div>
                     <h2 class="panel__title">Gestión de usuarios</h2>
                     <p class="panel__subtitle">
-                        Cambia roles, activa/desactiva cuentas y revisa el estado general de los usuarios.
+                        Busca usuarios, ajusta su saldo y modifica su rol desde un solo lugar.
                     </p>
                 </div>
-                <a href="#" class="panel__link">Ver más filtros</a>
+                <div class="panel__tools">
+                    <div class="search-box">
+                        <input type="text"
+                               id="user-search"
+                               class="search-box__input"
+                               placeholder="Buscar por nombre o correo...">
+                        <button type="button" class="search-box__button" aria-label="Buscar"></button>
+                    </div>
+                </div>
             </header>
 
             <div class="table-wrapper table-wrapper--compact">
@@ -68,57 +90,33 @@
                             <th>Nombre</th>
                             <th>Correo</th>
                             <th>Rol</th>
-                            <th>Estado</th>
                             <th class="table__th--right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in users %}
-                        <tr>
-                            <td>{{ user.name }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>
-                                <!-- Form para cambiar rol -->
-                                <form method="post"
-                                      action="{% url 'admin_update_user_role' user.id %}"
-                                      class="inline-form">
-                                    {% csrf_token %}
-                                    <select name="role" class="select-small">
-                                        <option value="buyer"  {% if user.role == 'buyer' %}selected{% endif %}>Buyer</option>
-                                        <option value="seller" {% if user.role == 'seller' %}selected{% endif %}>Seller</option>
-                                        <option value="admin"  {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
-                                    </select>
-                                    <button type="submit" class="btn btn-small btn-ghost">
-                                        Guardar
-                                    </button>
-                                </form>
-                            </td>
-                            <td>
-                                <span class="chip chip--{{ user.is_active|yesno:'active,inactive' }}">
-                                    {{ user.is_active|yesno:'Activo,Inactivo' }}
-                                </span>
-                            </td>
+                        <tr data-user-row
+                            data-search-text="{{ user.name|default_if_none:'' }} {{ user.email|default_if_none:'' }}">
+                            <td class="table-main-text">{{ user.name }}</td>
+                            <td class="table-sub-text">{{ user.email }}</td>
+                            <td>{{ user.role|title }}</td>
                             <td class="table__td--right">
-                                <!-- Activar / desactivar -->
-                                <form method="post"
-                                      action="{% url 'admin_toggle_user_active' user.id %}"
-                                      class="inline-form">
-                                    {% csrf_token %}
-                                    {% if user.is_active %}
-                                        <button type="submit" class="btn btn-small btn-danger">
-                                            Desactivar
-                                        </button>
-                                    {% else %}
-                                        <button type="submit" class="btn btn-small btn-primary">
-                                            Activar
-                                        </button>
-                                    {% endif %}
-                                </form>
+                                <div class="table-actions">
+                                    <button type="button"
+                                            class="btn btn-small btn-outline"
+                                            data-open-modal="modal-manage-user"
+                                            data-user-id="{{ user.id }}"
+                                            data-user-name="{{ user.name }}"
+                                            data-user-email="{{ user.email }}"
+                                            data-user-role="{{ user.role }}">
+                                        Gestionar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="table-empty">
+                            <td colspan="4" class="table-empty">
                                 No hay usuarios registrados aún.
                             </td>
                         </tr>
@@ -155,7 +153,11 @@
                         {% for order in orders %}
                         <tr>
                             <td>#{{ order.id }}</td>
-                            <td>{{ order.created_at }}</td>
+                            <td>
+                                <span class="date-cell" data-iso="{{ order.created_at }}">
+                                    {{ order.created_at }}
+                                </span>
+                            </td>
                             <td>{{ order.buyer_name|default:"—" }}</td>
                             <td>
                                 <span class="chip chip--{{ order.status }}">
@@ -190,7 +192,11 @@
                     <tbody>
                         {% for tx in transactions %}
                         <tr>
-                            <td>{{ tx.created_at }}</td>
+                            <td>
+                                <span class="date-cell" data-iso="{{ tx.created_at }}">
+                                    {{ tx.created_at }}
+                                </span>
+                            </td>
                             <td>{{ tx.user_name|default:"—" }}</td>
                             <td>{{ tx.type|title }}</td>
                             <td class="table__td--amount {% if tx.amount > 0 %}amount--positive{% elif tx.amount < 0 %}amount--negative{% endif %}">
@@ -209,7 +215,268 @@
             </div>
         </section>
 
-    </div>
+    </div> <!-- /dashboard-columns -->
 
+</div> <!-- /dashboard -->
+
+<!-- ========== MODAL: CREAR USUARIO ========== -->
+<div class="modal" id="modal-create-user">
+    <div class="modal__backdrop"></div>
+    <div class="modal__dialog">
+        <header class="modal__header">
+            <h3 class="modal__title">Crear nuevo usuario</h3>
+            <button type="button" class="modal__close" data-close-modal>&times;</button>
+        </header>
+
+        <form method="post" action="{% url 'admin_create_user' %}">
+            {% csrf_token %}
+            <div class="modal__body">
+                <div class="form-grid">
+                    <div class="field field--full">
+                        <label>Nombre completo</label>
+                        <input type="text" name="name" required>
+                    </div>
+
+                    <div class="field field--full">
+                        <label>Correo electrónico</label>
+                        <input type="email" name="email" required>
+                    </div>
+
+                    <div class="field">
+                        <label>Rol</label>
+                        <select name="role" class="select-small" required>
+                            <option value="buyer">Buyer</option>
+                            <option value="seller">Seller</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Saldo inicial (UPBolis)</label>
+                        <input type="number" name="initial_balance" min="0" step="0.01" value="0">
+                    </div>
+
+                    <div class="field">
+    <label>Contraseña</label>
+    <input type="password" name="password" placeholder="Opcional: dejar vacío para usar una por defecto">
 </div>
+<div class="field">
+    <label>Confirmar contraseña</label>
+    <input type="password" name="password_confirmation" placeholder="Repite la contraseña">
+</div>
+
+                </div>
+            </div>
+
+            <footer class="modal__footer">
+                <button type="button" class="btn btn-ghost" data-close-modal>Cancelar</button>
+                <button type="submit" class="btn btn-primary">Crear usuario</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<!-- ========== MODAL: CARGAR UPBOLIS ========== -->
+<div class="modal" id="modal-topup">
+    <div class="modal__backdrop"></div>
+    <div class="modal__dialog">
+        <header class="modal__header">
+            <h3 class="modal__title">Cargar UPBolis a usuario</h3>
+            <button type="button" class="modal__close" data-close-modal>&times;</button>
+        </header>
+
+        <form method="post" action="{% url 'admin_topup_tokens' %}">
+            {% csrf_token %}
+            <div class="modal__body">
+                <div class="form-grid">
+                    <div class="field field--full">
+                        <label>Usuario</label>
+                        <select name="user_id" id="topup-user-select" class="select-small" required>
+                            <option value="">Selecciona un usuario…</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">
+                                {{ user.name }} – {{ user.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Monto (UPBolis)</label>
+                        <input type="number" name="amount" min="1" step="1" required>
+                    </div>
+                    <div class="field field--full">
+                        <label>Motivo / nota interna</label>
+                        <input type="text" name="reason" placeholder="Promoción, recompensa, corrección de saldo, etc.">
+                    </div>
+                </div>
+            </div>
+
+            <footer class="modal__footer">
+                <button type="button" class="btn btn-ghost" data-close-modal>Cancelar</button>
+                <button type="submit" class="btn btn-accent">Cargar UPBolis</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<!-- ========== MODAL: GESTIONAR USUARIO (ROL + SALDO) ========== -->
+<div class="modal" id="modal-manage-user">
+    <div class="modal__backdrop"></div>
+    <div class="modal__dialog">
+        <header class="modal__header">
+            <div>
+                <h3 class="modal__title">Gestionar usuario</h3>
+                <p class="modal__subtitle" id="manage-user-subtitle"></p>
+            </div>
+            <button type="button" class="modal__close" data-close-modal>&times;</button>
+        </header>
+
+        <form method="post" id="manage-user-form">
+            {% csrf_token %}
+            <div class="modal__body">
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Rol</label>
+                        <select name="role" id="manage-user-role" class="select-small" required>
+                            <option value="buyer">Buyer</option>
+                            <option value="seller">Seller</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label>Monto de ajuste (UPBolis)</label>
+                        <input type="number" name="amount" min="0" step="0.01" value="0">
+                    </div>
+
+                    <div class="field field--full">
+                        <label>Operación sobre el saldo</label>
+                        <div class="radio-row">
+                            <label class="radio-inline">
+                                <input type="radio" name="operation" value="deposit" checked>
+                                Añadir saldo
+                            </label>
+                            <label class="radio-inline">
+                                <input type="radio" name="operation" value="withdraw">
+                                Restar saldo
+                            </label>
+                        </div>
+                        <p class="field__hint">Deja el monto en 0 si solo quieres cambiar el rol.</p>
+                    </div>
+
+                    <div class="field field--full">
+                        <label>Motivo / nota interna</label>
+                        <input type="text" name="reason" placeholder="Ajuste manual desde panel de admin.">
+                    </div>
+                </div>
+            </div>
+
+            <footer class="modal__footer">
+                <button type="button" class="btn btn-ghost" data-close-modal>Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </footer>
+        </form>
+    </div>
+</div>
+
+<!-- ========== JS PARA MODALES, GESTIÓN, BÚSQUEDA Y FECHAS ========== -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const modals = document.querySelectorAll('.modal');
+
+    const manageModal = document.getElementById('modal-manage-user');
+    const manageForm = document.getElementById('manage-user-form');
+    const manageSubtitle = document.getElementById('manage-user-subtitle');
+    const manageRoleSelect = document.getElementById('manage-user-role');
+
+    // Abrir modal genérico
+    document.querySelectorAll('[data-open-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-open-modal');
+            const modal = document.getElementById(id);
+            if (!modal) return;
+
+            // Si es topup y viene desde fila de usuario, preseleccionar
+            if (id === 'modal-topup' && btn.dataset.userId) {
+                const select = modal.querySelector('#topup-user-select');
+                if (select) {
+                    select.value = btn.dataset.userId;
+                }
+            }
+
+            // Si es gestionar usuario, rellenar datos
+            if (id === 'modal-manage-user') {
+                const userId = btn.dataset.userId;
+                const name = btn.dataset.userName || '';
+                const email = btn.dataset.userEmail || '';
+                const role = (btn.dataset.userRole || 'buyer').toLowerCase();
+
+                if (manageForm) {
+                    manageForm.action = `/admin-panel/users/${userId}/manage/`;
+                }
+                if (manageSubtitle) {
+                    manageSubtitle.textContent = `${name} · ${email}`;
+                }
+                if (manageRoleSelect) {
+                    manageRoleSelect.value = role;
+                }
+            }
+
+            modal.classList.add('is-open');
+        });
+    });
+
+    // Cerrar modal
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modal = btn.closest('.modal');
+            if (modal) modal.classList.remove('is-open');
+        });
+    });
+
+    // Cerrar al hacer click en el fondo
+    modals.forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal__backdrop')) {
+                modal.classList.remove('is-open');
+            }
+        });
+    });
+
+    // Búsqueda simple en la tabla de usuarios
+    const userSearch = document.getElementById('user-search');
+    if (userSearch) {
+        userSearch.addEventListener('input', () => {
+            const term = userSearch.value.trim().toLowerCase();
+            document.querySelectorAll('[data-user-row]').forEach(row => {
+                const text = (row.dataset.searchText || '').toLowerCase();
+                row.style.display = !term || text.includes(term) ? '' : 'none';
+            });
+        });
+    }
+
+    // ===== FORMATEAR FECHAS ISO EN TABLAS =====
+    const dateCells = document.querySelectorAll('.date-cell[data-iso]');
+    const opts = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+
+    dateCells.forEach(el => {
+        const iso = el.dataset.iso;
+        if (!iso) return;
+
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return;
+
+        let formatted = d.toLocaleString('es-BO', opts);
+        formatted = formatted.replace(',', ''); // quitar coma si aparece
+        el.textContent = formatted;
+    });
+});
+</script>
+
 {% endblock %}

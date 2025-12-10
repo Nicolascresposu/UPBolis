@@ -15,7 +15,6 @@ urlpatterns = [
     path('admin-panel/', views.admin_dashboard,  name='admin_dashboard'),
 
     # -------- SELLER: gestión de productos --------
-    # (el "create" lo manejaremos en la misma /seller/, así que NO hace falta ruta extra)
     path(
         'seller/products/<int:product_id>/delete/',
         views.seller_delete_product,
@@ -24,13 +23,35 @@ urlpatterns = [
 
     # -------- ADMIN: gestión de usuarios --------
     path(
-        'admin/users/<int:user_id>/role/',
+        'admin-panel/users/<int:user_id>/role/',
         views.admin_update_user_role,
         name='admin_update_user_role',
     ),
     path(
-        'admin/users/<int:user_id>/toggle-active/',
+        'admin-panel/users/<int:user_id>/toggle-active/',
         views.admin_toggle_user_active,
         name='admin_toggle_user_active',
+    ),
+    path(
+        'admin-panel/users/create/',
+        views.admin_create_user,
+        name='admin_create_user',
+    ),
+    path(
+        'admin-panel/users/topup/',
+        views.admin_topup_tokens,
+        name='admin_topup_tokens',
+    ),
+    path(
+        'admin-panel/users/<int:user_id>/manage/',
+        views.admin_manage_user,
+        name='admin_manage_user',
+    ),
+
+    # -------- WALLET: transferencia entre usuarios --------
+    path(
+        'wallet/transfer/',
+        views.wallet_transfer,
+        name='wallet_transfer',
     ),
 ]

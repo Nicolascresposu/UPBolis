@@ -3,8 +3,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}UPBolis{% endblock %}</title>
+    <title>
+        {% block title %}
+            UPBolis · Plataforma de pagos digitales
+        {% endblock %}
+    </title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- (opcional pero bonito en móviles/navegador) -->
+    <meta name="theme-color" content="#020202">
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
@@ -12,19 +19,19 @@
 
 <div class="layout-frame">
 
-    <!-- CABECERA: TARJETA DE MARCA SIN 3D -->
+    <!-- CABECERA: TARJETA DE MARCA -->
     <header class="top-card">
-        <div class="top-card__brand">
-            <div class="brand-orbit">
-                <div class="brand-orbit__token"></div>
-                <div class="brand-orbit__ring"></div>
-            </div>
-            <div class="top-card__text">
-                <span class="top-card__title">UPBOLIS</span>
-                <span class="top-card__subtitle">Plataforma de pagos digitales</span>
-            </div>
+    <div class="top-card__brand">
+        <div class="brand-orbit">
+            <div class="brand-orbit__token"></div>
+            <div class="brand-orbit__ring"></div>
         </div>
-    </header>
+        <div class="top-card__text">
+            <span class="top-card__title-word">UPBolis</span>
+        </div>
+    </div>
+</header>
+
 
     <!-- CONTENIDO CENTRAL -->
     <main class="frame-main">

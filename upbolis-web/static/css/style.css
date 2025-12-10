@@ -101,6 +101,44 @@ body.upb-body {
     background: radial-gradient(circle at top left, #020617 0, #020202 40%, #020617 100%);
 }
 
+/* Etiqueta pequeña encima del nombre (si la usas) */
+.top-card__eyebrow {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-soft);
+    margin-bottom: 2px;
+    display: block;
+}
+
+/* Nombre principal UPBolis, más grande y con gradiente */
+.top-card__title-word {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    background: linear-gradient(120deg, #e5e7eb, #38bdf8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent; /* para que se vea el gradiente */
+}
+
+/* Resaltar parte del texto, por si quieres separar UPB / olis */
+.top-card__title-highlight {
+    background: linear-gradient(120deg, #facc15, #f97316);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.top-card:hover .top-card__title-word,
+.top-card:hover .top-card__title-highlight {
+    filter: brightness(1.1);
+}
+
 .top-card__brand {
     display: flex;
     align-items: center;
@@ -180,7 +218,7 @@ body.upb-body {
     border-color: rgba(56, 189, 248, 0.45);
 }
 
-/* HEADER TARJETA LOGIN (solo título centrado) */
+/* HEADER TARJETA LOGIN */
 
 .auth-card-single__header {
     display: flex;
@@ -265,7 +303,6 @@ body.upb-body {
 .field--focused input {
     border-color: var(--primary-strong);
     background: #020617;
-    /* menos glow hacia abajo */
     box-shadow:
         0 0 0 1px rgba(56, 189, 248, 0.75),
         0 0 18px rgba(8, 47, 73, 0.7);
@@ -345,13 +382,215 @@ body.upb-body {
     padding: 9px 16px;
 }
 
+/* Botón acento (amarillo), más discreto */
+.btn-accent {
+    background: transparent;
+    color: var(--accent);
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(250, 204, 21, 0.7);
+    box-shadow: 0 3px 10px rgba(251, 191, 36, 0.22);
+    font-weight: 600;
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.1s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease;
+}
+
+.btn-accent:hover {
+    background: rgba(250, 204, 21, 0.05);
+    border-color: rgba(250, 204, 21, 0.95);
+    color: #fef9c3;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(251, 191, 36, 0.38);
+}
+
+/* Caja de búsqueda en panel de usuarios */
+.panel__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.search-box {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.search-box__input {
+    padding: 6px 26px 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(55, 65, 81, 0.9);
+    background: #020617;
+    color: #e5e7eb;
+    font-size: 0.8rem;
+    min-width: 200px;
+}
+
+.search-box__button {
+    position: absolute;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: radial-gradient(circle at 30% 30%, rgba(148, 163, 184, 0.8), rgba(17, 24, 39, 1));
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Subtítulo pequeño en modal */
+.modal__subtitle {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-top: 2px;
+}
+
+/* fila de radios */
+.radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 4px;
+}
+
+.radio-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: #e5e7eb;
+}
+
+/* hint debajo de un field */
+.field__hint {
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--text-soft);
+}
+
+/* Tamaños */
+.btn-small {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+}
+
+/* Botón secundario (gris) */
+.btn-secondary {
+    background: #111827;
+    color: #e5e7eb;
+    padding: 8px 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(55, 65, 81, 0.9);
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.1s ease,
+        box-shadow 0.18s ease;
+}
+
+.btn-secondary:hover {
+    background: #1f2937;
+    border-color: rgba(148, 163, 184, 0.9);
+    transform: translateY(-1px);
+    box-shadow: 0 7px 14px rgba(0, 0, 0, 0.85);
+}
+
+/* Botón contorno */
+.btn-outline {
+    background: transparent;
+    color: #e5e7eb;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(148, 163, 184, 0.7);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.7);
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.1s ease,
+        box-shadow 0.18s ease;
+}
+
+.btn-outline:hover {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(56, 189, 248, 0.85);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.95);
+}
+
+/* Botón fantasma (Cerrar sesión) */
+.btn-ghost {
+    background: transparent;
+    color: #e5e7eb;
+    padding: 8px 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.1s ease;
+}
+
+.btn-ghost:hover {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(148, 163, 184, 0.6);
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+/* Versión de peligro para logout */
+.btn-ghost--danger {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+.btn-ghost--danger:hover {
+    background: rgba(127, 29, 29, 0.25);
+    border-color: rgba(248, 113, 113, 0.8);
+    color: #fecaca;
+    text-decoration: none;
+}
+
+/* Botón peligro sólido pequeño */
+.btn-danger {
+    background: linear-gradient(135deg, #7f1d1d, #dc2626);
+    color: #fee2e2;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(239, 68, 68, 0.7);
+    box-shadow: 0 5px 14px rgba(127, 29, 29, 0.9);
+    transition: transform 0.1s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 9px 18px rgba(127, 29, 29, 1);
+    filter: brightness(1.03);
+}
+
+/* Select más grande, alineado con los inputs */
+.select-small {
+    border-radius: 999px;
+    border: 1px solid rgba(55, 65, 81, 0.9);
+    background: #020617;
+    color: #e5e7eb;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    min-height: 36px;
+}
+
 /* Versión más sobria del botón principal */
 .btn-primary {
-    background: linear-gradient(
-        135deg,
-        #0f172a,
-        #1d4ed8
-    );
+    background: linear-gradient(135deg, #0f172a, #1d4ed8);
     color: #e5e7eb;
     box-shadow:
         0 6px 16px rgba(15, 23, 42, 0.85),
@@ -379,7 +618,7 @@ body.upb-body {
         0 0 0 1px rgba(56, 189, 248, 0.4);
 }
 
-/* Ripple que agrega JS dentro del botón */
+/* Ripple para btn-primary (JS) */
 .btn-primary .ripple {
     position: absolute;
     border-radius: 50%;
@@ -457,10 +696,17 @@ body.upb-body {
     color: #9ca3af;
 }
 
+/* Botones del header del dashboard */
 .dashboard__header-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
+}
+
+.dashboard__header-actions .btn {
+    min-width: 150px;
+    justify-content: center;
+    display: inline-flex;
 }
 
 /* Grid resumen */
@@ -628,6 +874,7 @@ body.upb-body {
 .table td {
     color: #e5e7eb;
     border-bottom: 1px solid rgba(31, 41, 55, 0.85);
+    vertical-align: middle;
 }
 
 .table tr:last-child td {
@@ -639,9 +886,19 @@ body.upb-body {
     padding: 0.45rem 0.7rem;
 }
 
+/* Centrado de la columna Acciones y su contenido */
 .table__th--right,
 .table__td--right {
-    text-align: right;
+    text-align: center;
+}
+
+/* Agrupar botones en Acciones */
+.table-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
 }
 
 .table-main-text {
@@ -701,7 +958,7 @@ body.upb-body {
     color: #f97373;
 }
 
-/* ========== MODAL (SELLER) ========== */
+/* ========== MODAL ========== */
 
 .modal {
     position: fixed;
@@ -787,4 +1044,103 @@ body.upb-body {
 .inline-form {
     display: inline-block;
     margin-left: 0.35rem;
+}
+
+/* Cerrar sesión sin subrayado asegurado en el header */
+.dashboard__header-actions .btn-ghost,
+.dashboard__header-actions .btn-ghost:hover {
+    text-decoration: none;
+}
+
+/* Forzar centrado de la columna "Acciones" */
+.table th.table__th--right {
+    text-align: center !important;
+}
+
+.table td.table__td--right {
+    text-align: center !important;
+}
+
+/* Para que algunas tablas puedan hacer wrap del texto
+   y evitar la barra horizontal fea */
+.table--wrap th,
+.table--wrap td {
+    white-space: normal;      /* permite que el texto baje de línea */
+}
+
+/* Wrapper sin scroll horizontal visible */
+.table-wrapper--no-scroll {
+    overflow-x: hidden;
+}
+
+/* En celdas largas (detalle de la transacción) permitir cortes bonitos */
+.table-cell-wrap {
+    word-break: break-word;
+}
+
+.alert-success {
+    border-color: rgba(34, 197, 94, 0.7);
+    background: rgba(22, 101, 52, 0.5);
+    color: #bbf7d0;
+}
+
+/* ========== TOASTS (MENSAJES FLOTANTES) ========== */
+
+.toast-container {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 9999;
+}
+
+.toast {
+    min-width: 260px;
+    max-width: 360px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    background: #020617;
+    color: #e5e7eb;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s ease;
+}
+
+.toast.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.toast.is-hidden {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+/* variantes por tipo de mensaje */
+.toast--success {
+    border-color: rgba(34, 197, 94, 0.9);
+    background: rgba(22, 163, 74, 0.25);
+}
+
+.toast--error {
+    border-color: rgba(248, 113, 113, 0.9);
+    background: rgba(127, 29, 29, 0.35);
+}
+
+.toast--warning {
+    border-color: rgba(250, 204, 21, 0.9);
+    background: rgba(161, 98, 7, 0.35);
+}
+
+.toast--info {
+    border-color: rgba(59, 130, 246, 0.8);
+    background: rgba(30, 64, 175, 0.4);
 }

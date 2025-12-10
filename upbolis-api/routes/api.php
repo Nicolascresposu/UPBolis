@@ -29,19 +29,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
 
     // ---------- WALLET / UPBolis ----------
-    Route::get('wallet',           [WalletController::class, 'show']);      // ver saldo y datos
-    Route::post('wallet/transfer', [WalletController::class, 'transfer']);  // transferir UPBolis a otro usuario
-    Route::get('transactions',     [TransactionController::class, 'index']); // historial de movimientos de MI wallet
+    Route::get('wallet',              [WalletController::class, 'show']);       // ver saldo y datos
+    Route::get('wallet/recipients',   [WalletController::class, 'recipients']); // LISTA DE DESTINATARIOS
+    Route::post('wallet/transfer',    [WalletController::class, 'transfer']);   // transferir UPBolis a otro usuario
+    Route::get('transactions',        [TransactionController::class, 'index']); // historial de movimientos de MI wallet
 
     // ---------- PRODUCTOS (acceso general) ----------
-    // Todos los usuarios logueados pueden ver el catálogo
     Route::get('products',           [ProductController::class, 'index']);   // lista de productos activos
     Route::get('products/{product}', [ProductController::class, 'show']);    // ver detalle de un producto
 
     // ---------- ÓRDENES DEL COMPRADOR (buyer) ----------
     Route::get('orders',          [OrderController::class, 'index']);  // mis órdenes
     Route::get('orders/{order}',  [OrderController::class, 'show']);   // detalle de mi orden
-    Route::post('orders',         [OrderController::class, 'store']);  // crear una compra (descarga de saldo + stock)
+    Route::post('orders',         [OrderController::class, 'store']);  // crear una compra
 
     // ==================================================
     //                       SELLER
@@ -49,14 +49,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('seller')->prefix('seller')->group(function () {
 
         // --- Productos del seller ---
-        Route::get('products',                 [ProductController::class, 'myProducts']); // productos creados por mí
-        Route::post('products',                [ProductController::class, 'store']);      // crear producto
-        Route::put('products/{product}',       [ProductController::class, 'update']);     // editar producto propio
-        Route::delete('products/{product}',    [ProductController::class, 'destroy']);    // eliminar producto propio
+        Route::get('products',              [ProductController::class, 'myProducts']);
+        Route::post('products',             [ProductController::class, 'store']);
+        Route::put('products/{product}',    [ProductController::class, 'update']);
+        Route::delete('products/{product}', [ProductController::class, 'destroy']);
 
         // --- Órdenes relacionadas con mis productos ---
-        Route::get('orders',                   [SellerOrderController::class, 'index']);  // órdenes donde hay productos míos
-        Route::get('orders/{order}',           [SellerOrderController::class, 'show']);   // detalle filtrado por mis items
+        Route::get('orders',                [SellerOrderController::class, 'index']);
+        Route::get('orders/{order}',        [SellerOrderController::class, 'show']);
     });
 
     // ==================================================
@@ -65,28 +65,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
 
         // --- Gestión de usuarios ---
-        Route::get('users',                    [UserAdminController::class, 'index']);     // listar usuarios
-        Route::get('users/{user}',             [UserAdminController::class, 'show']);      // ver detalle usuario
-        Route::patch('users/{user}/role',      [UserAdminController::class, 'updateRole']); // cambiar rol (buyer/seller/admin)
-        Route::patch('users/{user}/deactivate',[UserAdminController::class, 'deactivate']); // desactivar usuario (opcional)
+        Route::get('users',                    [UserAdminController::class, 'index']);
+        Route::get('users/{user}',             [UserAdminController::class, 'show']);
+        Route::post('users',                   [UserAdminController::class, 'store']);  // si luego lo usas
+        Route::patch('users/{user}/role',      [UserAdminController::class, 'updateRole']);
+        Route::patch('users/{user}/deactivate',[UserAdminController::class, 'deactivate']);
 
         // --- Gestión de wallets / saldo ---
-        Route::get('wallets',                  [AdminWalletController::class, 'index']);    // listar wallets
-        Route::get('wallets/{user}',           [AdminWalletController::class, 'show']);     // ver wallet de un usuario
-        Route::post('wallets/{user}/deposit',  [AdminWalletController::class, 'deposit']);  // cargar UPBolis a un usuario
-        Route::post('wallets/{user}/withdraw', [AdminWalletController::class, 'withdraw']); // restar saldo (ajuste admin)
+        Route::get('wallets',                  [AdminWalletController::class, 'index']);
+        Route::get('wallets/{user}',           [AdminWalletController::class, 'show']);
+        Route::post('wallets/{user}/deposit',  [AdminWalletController::class, 'deposit']);
+        Route::post('wallets/{user}/withdraw', [AdminWalletController::class, 'withdraw']);
 
         // --- Gestión de productos (global) ---
-        Route::get('products',                 [ProductController::class, 'index']);        // ver catálogo
-        Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive']); // activar/desactivar producto
+        Route::get('products',                 [ProductController::class, 'index']);
+        Route::patch('products/{product}/toggle-active', [ProductController::class, 'toggleActive']);
 
         // --- Gestión global de órdenes ---
-        Route::get('orders',                   [AdminOrderController::class, 'index']);     // todas las órdenes
-        Route::get('orders/{order}',           [AdminOrderController::class, 'show']);      // detalle de una orden
-        Route::patch('orders/{order}/status',  [AdminOrderController::class, 'updateStatus']); // cambiar status (paid/cancelled/etc.)
+        Route::get('orders',                   [AdminOrderController::class, 'index']);
+        Route::get('orders/{order}',           [AdminOrderController::class, 'show']);
+        Route::patch('orders/{order}/status',  [AdminOrderController::class, 'updateStatus']);
 
         // --- Gestión global de transacciones ---
-        Route::get('transactions',             [AdminTransactionController::class, 'index']); // todas las transacciones
-        Route::get('users/{user}/transactions',[AdminTransactionController::class, 'byUser']); // transacciones de un usuario específico
+        Route::get('transactions',             [AdminTransactionController::class, 'index']);
+        Route::get('users/{user}/transactions',[AdminTransactionController::class, 'byUser']);
     });
 });
