@@ -183,15 +183,16 @@ Laravel API procesa y devuelve JSON
 Django Frontend actualiza la UI
 ```
 
-## Próximos Pasos Opcionales (Interno)
+## Próximos Pasos Opcionales / TO-DO (En orden de prioridad)
 
-1. **Editar productos**: Agregar modal para editar productos existentes
-2. **Filtros**: Buscar/filtrar productos por nombre o precio
-3. **Validaciones**: Más validaciones en frontend (ej: saldo insuficiente)
-4. **Notificaciones**: Sistema de notificaciones en tiempo real
+0. **(Urgente) Dashboard de administrador para agregar y remover el cargo de seller a usuarios.**
+1. **(Igual de urgente) Webhooks para los sellers para que puedan ser notificados cuando su producto es comprado**
+2. **Editar productos**: Agregar modal para editar productos existentes
+3. **Filtros**: Buscar/filtrar productos por nombre o precio (fzf? busqueda normal?)
+4. **Validaciones**: Más validaciones en frontend (ej: saldo insuficiente)
 5. **Imagen de productos**: Permitir subir imágenes
 6. **Reviews**: Sistema de reseñas y valoraciones
-7. **Carrito**: Agregar múltiples items al carrito antes de confirmar
+8. **Carrito**: Agregar múltiples items al carrito antes de confirmar
 
 ## Solución de Problemas
 
