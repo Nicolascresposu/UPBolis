@@ -29,9 +29,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
 
     // ---------- WALLET / UPBolis ----------
-    Route::get('wallet',           [WalletController::class, 'show']);      // ver saldo y datos
-    Route::post('wallet/transfer', [WalletController::class, 'transfer']);  // transferir UPBolis a otro usuario
-    Route::get('transactions',     [TransactionController::class, 'index']); // historial de movimientos de MI wallet
+    Route::get('wallet',            [WalletController::class, 'show']);      // ver saldo y datos
+    Route::post('wallet/transfer',  [WalletController::class, 'transfer']);  // transferir UPBolis a otro usuario
+    Route::post('wallet/deposit',   [WalletController::class, 'deposit']);   // agregar saldo a la wallet (PoC)
+    Route::get('transactions',      [TransactionController::class, 'index']); // historial de movimientos de MI wallet
 
     // ---------- PRODUCTOS (acceso general) ----------
     // Todos los usuarios logueados pueden ver el catálogo

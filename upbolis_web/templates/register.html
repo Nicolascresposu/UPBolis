@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Register - UPBolis{% endblock %}
+
+{% block content %}
+<div class="register-layout">
+    <div class="register-box">
+        <h2>Crear cuenta</h2>
+        <p>Regístrate como comprador para empezar a comprar productos.</p>
+
+        <form method="post" class="form-grid">
+            {% csrf_token %}
+
+            <div class="form-field">
+                <label>Nombre completo</label>
+                <input type="text" name="name" placeholder="Tu nombre" required maxlength="255" />
+            </div>
+
+            <div class="form-field">
+                <label>Correo electrónico</label>
+                <input type="email" name="email" placeholder="tucorreo@upbolis.com" required />
+            </div>
+
+            <div class="form-field">
+                <label>Contraseña</label>
+                <input type="password" name="password" placeholder="••••••••" required minlength="6" />
+            </div>
+
+            <div class="form-field">
+                <label>Confirmar contraseña</label>
+                <input type="password" name="password_confirmation" placeholder="••••••••" required minlength="6" />
+            </div>
+
+            <div>
+                <button type="submit" class="btn btn-primary">Crear cuenta</button>
+                <a href="{% url 'login' %}" class="btn btn-ghost">Volver a login</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.register-layout { padding: 30px; display:flex; justify-content:center; }
+.register-box { width: 420px; background:#fff; padding:20px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08);} 
+.form-field { margin-bottom:12px; }
+.form-field input { width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; }
+</style>
+{% endblock %}

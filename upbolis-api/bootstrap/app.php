@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'  => \App\Http\Middleware\IsAdmin::class,
             'seller' => \App\Http\Middleware\IsSeller::class,
         ]);
+
+        // Permitir CORS para desarrollo
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

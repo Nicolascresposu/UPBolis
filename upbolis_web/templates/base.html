@@ -28,6 +28,9 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-ghost">Salir</button>
                 </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-ghost">Entrar</a>
+                <a href="{% url 'register' %}" class="btn btn-primary" style="margin-left:8px;">Regístrate</a>
             {% endif %}
         </div>
     </nav>
@@ -45,5 +48,14 @@
         </section>
     </main>
 </div>
+
+<!-- Script para guardar el token en localStorage después de login -->
+<script>
+    // Si tenemos token en session, guardarlo en localStorage
+    {% if request.session.api_token %}
+        localStorage.setItem('api_token', '{{ request.session.api_token }}');
+    {% endif %}
+</script>
 </body>
 </html>
+

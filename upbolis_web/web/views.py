@@ -278,11 +278,94 @@ def login_view(request):
         messages.error(request, f"Respuesta inesperada de la API: {data}")
         return render(request, 'login.html', status=500)
 
-    # Guardar en sesión
+    # Guardar en sesión (para acceso en templates)
     request.session['api_token'] = token
     request.session['api_user'] = user
 
-    # Redirigir según rol
+    # Redirigir según rol (el token se maneja en cliente con localStorage)
+    role = str(user.get('role', '')).lower()
+    if role == 'admin':
+        return redirect('admin_dashboard')
+    elif role == 'seller':
+        return redirect('seller_dashboard')
+    else:
+        return redirect('buyer_dashboard')
+
+
+def register_view(request):
+    # GET: mostrar formulario
+    if request.method == 'GET':
+        if request.session.get('api_token') and request.session.get('api_user'):
+            return redirect('dashboard')
+        return render(request, 'register.html')
+
+    # POST: enviar registro a la API Laravel
+    name = request.POST.get('name')
+    email = request.POST.get('email')
+    password = request.POST.get('password')
+    password_confirmation = request.POST.get('password_confirmation')
+
+    try:
+        resp = requests.post(
+            f"{API_BASE}/auth/register",
+            json={
+                "name": name,
+                "email": email,
+                "password": password,
+                "password_confirmation": password_confirmation,
+            },
+            timeout=5,
+        )
+    except Exception as e:
+        messages.error(request, f"No se pudo conectar con la API: {e}")
+        return render(request, 'register.html', status=502)
+
+    status = resp.status_code
+    raw = (resp.text or "")[:400]
+
+    data = None
+    try:
+        data = resp.json()
+    except Exception:
+        data = None
+
+    if status not in (200, 201):
+        msg = None
+        if isinstance(data, dict):
+            # Laravel validation errors may be in 'message' or 'errors'
+            msg = data.get('message') or data.get('error')
+            if not msg and data.get('errors'):
+                # join validation messages
+                errors = data.get('errors')
+                msgs = []
+                for k, v in errors.items():
+                    if isinstance(v, list):
+                        msgs.extend(v)
+                    else:
+                        msgs.append(str(v))
+                msg = '; '.join(msgs)
+
+        if not msg:
+            msg = f"Error {status} desde la API. Respuesta: {raw}"
+
+        messages.error(request, msg)
+        return render(request, 'register.html', status=status)
+
+    if not isinstance(data, dict):
+        messages.error(request, f"Respuesta inesperada de la API: {raw}")
+        return render(request, 'register.html', status=500)
+
+    token = data.get('token')
+    user = data.get('user')
+
+    if not token or not user:
+        messages.error(request, f"Respuesta inesperada de la API: {data}")
+        return render(request, 'register.html', status=500)
+
+    # Guardar en sesión y redirigir
+    request.session['api_token'] = token
+    request.session['api_user'] = user
+
     role = str(user.get('role', '')).lower()
     if role == 'admin':
         return redirect('admin_dashboard')

@@ -49,4 +49,21 @@ class WalletController extends Controller
             'message' => 'Transferencia realizada',
         ]);
     }
+
+    // POST /api/wallet/deposit (self-service top-up for PoC)
+    public function deposit(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $wallet = $request->user()->wallet;
+        $wallet->balance += (float) $data['amount'];
+        $wallet->save();
+
+        return response()->json([
+            'message' => 'Saldo agregado correctamente',
+            'wallet' => $wallet,
+        ]);
+    }
 }
